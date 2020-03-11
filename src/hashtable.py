@@ -15,6 +15,8 @@ class HashTable:
     def __init__(self, capacity):
         self.capacity = capacity  # Number of buckets in the hash table
         self.storage = [None] * capacity
+        self.size = 0
+        self.old_size = None
 
 
     def _hash(self, key):
@@ -40,7 +42,9 @@ class HashTable:
         Take an arbitrary key and return a valid integer index
         within the storage capacity of the hash table.
         '''
-        return self._hash(key) % self.capacity
+        if self.old_size is None:
+            return self._hash(key) % self.capacity
+        return self._hash(key) % self.old_size
 
 
     def insert(self, key, value):
@@ -52,11 +56,18 @@ class HashTable:
         Fill this in.
         '''
         index = self._hash_mod(key)
+        node = self.storage[index]
 
-        if self.storage[index] is not None:
-            print(f'WARNING: Overwriting data at {index}')
-
-        self.storage[index] =LinkedPair(key, value)
+        while node is not None and node.key != key:
+            temp = node
+            node = node.next
+        if node is not None:
+            node.value = value
+        else:
+            new_node = LinkedPair(key, value)
+            new_node.next = self.storage[index]
+            self.storage[index] = new_node
+            self.size += 1
 
 
 
@@ -69,12 +80,23 @@ class HashTable:
         Fill this in.
         '''
         index = self._hash_mod(key)
+        node = self.storage[index]
 
-        if self.storage[index] is None:
-            print(f'WARNING: Key not found')
-            return
-
-        self.storage[index] = None
+        temp = None
+        while node.key != key:
+            temp = node
+            node = temp.next
+        if node is None:
+            return None
+        else:
+            if temp is None:
+                result = node.value
+                self.storage[index] = node.next
+                return result
+            else:
+                self.size -= 1
+                temp.next = node.next
+                return node.value
 
 
     def retrieve(self, key):
@@ -86,16 +108,13 @@ class HashTable:
         Fill this in.
         '''
         index = self._hash_mod(key)
+        node = self.storage[index]
 
-        if self.storage[index] is not None:
-            if self.storage[index].key == key:
-                return self.storage[index].value
-            else:
-                print(f'WARNING: Key doesnt match')
-                return None
-        else:
-            return None
-
+        while node is not None:
+            if node.key == key:
+                return node.value
+            node = node.next
+        return None
 
     def resize(self):
         '''
@@ -104,13 +123,12 @@ class HashTable:
 
         Fill this in.
         '''
+        self.old_size = self.capacity
         self.capacity *= 2
         new_storage = [None] * self.capacity
 
-        for bucket_item in self.storage:
-            if bucket_item is not None:
-                new_index = self._hash_mod(bucket_item.key)
-                new_storage[new_index] = LinkedPair(bucket_item.key, bucket_item.value)
+        for node in range(len(self.storage)):
+            new_storage[node] = self.storage[node]
         
         self.storage = new_storage
 
